@@ -1,40 +1,64 @@
-import { Component, ViewChild, ElementRef, OnInit } from '@angular/core';
-declare var $;
-declare var jquery:any;
+import { Component, OnInit } from "@angular/core";
+import {
+  FormControl,
+  FormGroup,
+  ValidatorFn,
+  FormBuilder,
+  AbstractControl,
+  Validators
+} from "@angular/forms";
+import ListService from "./list.service";
+
 @Component({
-  selector: 'app-list',
-  templateUrl: './list.component.html',
-  styleUrls: ['./list.component.css']
+  selector: "app-list",
+  templateUrl: "./list.component.html",
+  styleUrls: ["./list.component.css"]
 })
 export class ListComponent implements OnInit {
-
-  dataTable: any;
-  dtOption: any;
-  name: string;
-  constructor() {
-
-  }
+  profileForm: FormGroup;
+  submitted = false;
+  constructor(
+    private formBuilder: FormBuilder,
+    private listService: ListService
+  ) {}
+  record: any;
   ngOnInit(): void {
-    this.dtOption = {
-      "lengthMenu": [[10, 20, -1], ["10 dòng", "20 dòng", "Tất cả"]],
-      "pagingType": "full_numbers",
-      "oLanguage": {
-        "sLengthMenu": "Hiển thị _MENU_ ",
-        "oPaginate": {
-          "sFirst": "<<",
-          "sLast": ">>",
-          "sNext": ">",
-          "sPrevious": "<"
-        },
-        "sInfo": "(_START_/_END_)",
-        "sInfoEmpty": "Không có dữ liệu để hiển thị",
-        "sInfoFiltered": "",
-        "sZeroRecords": "Không tìm thấy"
-      }
-    };
-    $('#table').DataTable(this.dtOption); 
+    this.listService.getData().subscribe(data => {
+      this.record = data;
+    });
+
+    this.profileForm = this.formBuilder.group({
+      name: ["", Validators.required],
+      age: ["", Validators.required],
+      email: ["", [Validators.required, Validators.email]]
+    });
+    this.profileForm.get("name").disable();
+    this.profileForm.get("age").disable();
+    this.profileForm.get("email").disable();
   }
-  onKey() {
-    $('#table').DataTable().column(0).search(this.name).draw();
+  Editable(form_control: string) {
+    this.profileForm.get(form_control).enable();
   }
+  ResetInput(form_control: string) {
+    this.profileForm.get(form_control).setValue("");
+    this.profileForm.get(form_control).disable();
+  }
+  get f() {
+    return this.profileForm.controls;
+  }
+  onSubmit() {
+    this.submitted = true;
+    console.log("wow", this.record);
+    this.listService.postData();
+    if (this.profileForm.invalid) {
+      return;
+    }
+    alert("SUCCESS!! :-)\n\n" + JSON.stringify(this.profileForm.value));
+  }
+}
+export function forbiddenNameValidator(nameRe: RegExp): ValidatorFn {
+  return (control: AbstractControl): { [key: string]: any } | null => {
+    const forbidden = nameRe.test(control.value);
+    return forbidden ? { forbiddenName: { value: control.value } } : null;
+  };
 }
